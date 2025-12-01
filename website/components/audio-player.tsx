@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useRef, useState, useEffect } from "react"
 import { Play, Pause, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,31 +12,22 @@ interface AudioPlayerProps {
 
 export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
-
   const [isPlaying, setIsPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
-  const [volume, setVolume] = useState(100) // now represents % (0–400)
+  const [volume, setVolume] = useState(100)
 
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
 
-    // Setup Web Audio Boost
-    audioCtxRef.current = new AudioContext()
-    const source = audioCtxRef.current.createMediaElementSource(audio)
+    const updateDuration = () => {
+      setDuration(audio.duration)
+    }
 
-    const gainNode = audioCtxRef.current.createGain()
-    gainNode.gain.setValueAtTime(1, audioCtxRef.current.currentTime)
-
-    source.connect(gainNode).connect(audioCtxRef.current.destination)
-    gainNodeRef.current = gainNode
-
-    // Event listeners
-    const updateDuration = () => setDuration(audio.duration)
-    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime)
+    }
 
     audio.addEventListener("loadedmetadata", updateDuration)
     audio.addEventListener("timeupdate", updateTime)
@@ -48,33 +41,29 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
   }, [])
 
   const togglePlayPause = () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (isPlaying) {
-      audio.pause()
-    } else {
-      audio.play()
-      audioCtxRef.current?.resume()
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
     }
-    setIsPlaying(!isPlaying)
   }
 
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = Number(e.target.value)
+    const newTime = Number.parseFloat(e.target.value)
     setCurrentTime(newTime)
-    if (audioRef.current) audioRef.current.currentTime = newTime
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime
+    }
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVol = Number(e.target.value)
-    setVolume(newVol)
-
-    // Map 0–400 slider → gain 0–4.0
-    const gain = newVol / 100
-
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = gain
+    const newVolume = Number.parseFloat(e.target.value)
+    setVolume(newVolume)
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume / 100
     }
   }
 
@@ -89,12 +78,13 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     <div className="space-y-4">
       <audio ref={audioRef} src={audioUrl} />
 
-      {/* Playback Controls */}
+      {/* Play/Pause Controls */}
       <div className="flex items-center gap-4">
         <Button
           onClick={togglePlayPause}
           className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2"
           size="icon"
+          aria-label={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
         </Button>
@@ -107,27 +97,30 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
             max={duration || 0}
             value={currentTime}
             onChange={handleProgressChange}
-            className="w-full"
+            className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            aria-label="Audio progress"
           />
         </div>
 
-        <div className="text-sm text-slate-600 min-w-16 text-right">
+        {/* Time Display */}
+        <div className="text-sm text-slate-600 font-mono min-w-12 text-right">
           {formatTime(currentTime)} / {formatTime(duration)}
         </div>
       </div>
 
-      {/* Volume (Now goes up to 400%!) */}git remote set-url origin
+      {/* Volume Control */}
       <div className="flex items-center gap-3">
         <Volume2 className="w-4 h-4 text-slate-600" />
         <input
           type="range"
           min="0"
-          max="400"  // !!! LOUD !!!
+          max="100"
           value={volume}
           onChange={handleVolumeChange}
-          className="flex-1"
+          className="flex-1 h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          aria-label="Volume"
         />
-        <span className="text-sm text-slate-600 min-w-10">{volume}%</span>
+        <span className="text-sm text-slate-600 min-w-8">{volume}%</span>
       </div>
     </div>
   )
