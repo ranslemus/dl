@@ -21,6 +21,8 @@ export function AudioPlayer({ audioUrl }: AudioPlayerProps) {
     const audio = audioRef.current
     if (!audio) return
 
+    audio.volume = 1
+
     const updateDuration = () => {
       setDuration(audio.duration)
     }

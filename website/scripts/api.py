@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from tensorflow.keras.models import load_model
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 import pickle
 import numpy as np
 import librosa
@@ -23,11 +24,15 @@ SR = 16000
 N_Mels = 128
 Target_Width = 128
 
+SCRIPT_DIR = Path(__file__).parent 
+MODEL_PATH = SCRIPT_DIR / 'Resnet50_Model.h5'
+ENCODER_PATH = SCRIPT_DIR / 'label_encoder.pkl'
+
 # --- LOAD AI BRAINS ---
 print("Loading ResNet50 model...")
-model = load_model('Resnet50_model.h5') 
+model = load_model(MODEL_PATH) 
 
-with open('label_encoder.pkl', 'rb') as f:
+with open(ENCODER_PATH, 'rb') as f:
     le = pickle.load(f)
 print("Model loaded!")
 
